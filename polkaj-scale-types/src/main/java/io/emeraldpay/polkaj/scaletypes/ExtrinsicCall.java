@@ -8,10 +8,15 @@ import java.util.Objects;
  *
  * @see Metadata
  * @see Metadata.Module
- * @see Metadata.Call
+ * @see Metadata.TypeWrapper
  */
 public abstract class ExtrinsicCall {
-
+//metadatareaderspec
+    //changed metadata-kusama
+    //metadata.java
+    //metadatareader.java
+    //extrinsiccall
+    //balanceTransfer.java
     /**
      * Module index in metadata
      * @see Metadata.Module
@@ -20,7 +25,7 @@ public abstract class ExtrinsicCall {
 
     /**
      * Call index in module
-     * @see Metadata.Call
+     * @see Metadata.TypeWrapper
      */
     private int callIndex;
 
@@ -33,7 +38,7 @@ public abstract class ExtrinsicCall {
         this.callIndex = callIndex;
     }
 
-    public ExtrinsicCall(Metadata.Call call) {
+    public ExtrinsicCall(Metadata.TypeWrapper call) {
         this();
         init(call);
     }
@@ -43,9 +48,11 @@ public abstract class ExtrinsicCall {
      *
      * @param call Call details on current Runtime
      */
-    public void init(Metadata.Call call) {
-        setModuleIndex(call.getIndex() >> 8);
-        setCallIndex(call.getIndex() & 0xff);
+    public void init(Metadata.TypeWrapper call) {
+        setModuleIndex(4);
+        setCallIndex(0);
+        //setModuleIndex(call.getIndex() >> 8);
+        //setCallIndex(call.getIndex() & 0xff);
     }
 
     public int getModuleIndex() {

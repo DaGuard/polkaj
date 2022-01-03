@@ -12,26 +12,22 @@ public class MetadataReader implements ScaleReader<Metadata> {
 
     public static final ListReader<Metadata.Module> MODULE_LIST_READER = new ListReader<>(new ModulesReader());
     public static final ListReader<String> STRING_LIST_READER = new ListReader<>(ScaleCodecReader.STRING);
-    public static final EnumReader<Metadata.Storage.Hasher> HASHER_ENUM_READER = new EnumReader<>(Metadata.Storage.Hasher.values());
-
+    public static final ListReader<Metadata.Storage.Hasher> HASHER_ENUM_READER = new ListReader<Metadata.Storage.Hasher>(new EnumReader(Metadata.Storage.Hasher.values()));
     @Override
     public Metadata read(ScaleCodecReader rdr) {
         Metadata result = new Metadata();
         result.setMagic(ScaleCodecReader.INT32.read(rdr));
         result.setVersion(rdr.readUByte());
-        if (result.getVersion() != 12) {
+        //rmbr changed
+        if (result.getVersion() != 14) {
             throw new IllegalStateException("Unsupported metadata version: " + result.getVersion());
         }
         result.setModules(MODULE_LIST_READER.read(rdr));
         List<Metadata.Module> modules = result.getModules();
 
         for (Metadata.Module m: modules) {
-            List<Metadata.Call> calls = m.getCalls();
-            if (calls != null) {
-                for (int j = 0; j < calls.size(); j++) {
-                    calls.get(j).setIndex((m.getIndex() << 8) + j);
-                }
-            }
+            Metadata.TypeWrapper calls = m.getCalls();
+
         }
         return result;
     }
@@ -39,14 +35,15 @@ public class MetadataReader implements ScaleReader<Metadata> {
     static class ModulesReader implements ScaleReader<Metadata.Module> {
 
         public static final StorageReader STORAGE_READER = new StorageReader();
-        public static final ListReader<Metadata.Call> CALL_LIST_READER = new ListReader<>(new CallReader());
-        public static final ListReader<Metadata.Event> EVENT_LIST_READER = new ListReader<>(new EventReader());
+        public static final TypeWrapperReader CALL_LIST_READER = new TypeWrapperReader();
+        public static final TypeWrapperReader EVENT_LIST_READER = new TypeWrapperReader();
         public static final ListReader<Metadata.Constant> CONSTANT_LIST_READER = new ListReader<>(new ConstantReader());
-        public static final ListReader<Metadata.Error> ERROR_LIST_READER = new ListReader<>(new ErrorReader());
+        public static final TypeWrapperReader ERROR_LIST_READER = new TypeWrapperReader();
 
         @Override
         public Metadata.Module read(ScaleCodecReader rdr) {
             Metadata.Module result = new Metadata.Module();
+
             result.setName(rdr.readString());
             rdr.readOptional(STORAGE_READER).ifPresent(result::setStorage);
             rdr.readOptional(CALL_LIST_READER).ifPresent(result::setCalls);
@@ -93,9 +90,7 @@ public class MetadataReader implements ScaleReader<Metadata> {
         @SuppressWarnings("unchecked")
         private static final UnionReader<Metadata.Storage.Type<?>> TYPE_UNION_READER = new UnionReader<>(
                 new TypePlainReader(),
-                new TypeMapReader(),
-                new TypeDoubleMapReader()
-        );
+                new TypeMapReader());
 
         @Override
         public Metadata.Storage.Type<?> read(ScaleCodecReader rdr) {
@@ -106,7 +101,7 @@ public class MetadataReader implements ScaleReader<Metadata> {
     static class TypePlainReader implements ScaleReader<Metadata.Storage.PlainType> {
         @Override
         public Metadata.Storage.PlainType read(ScaleCodecReader rdr) {
-            return new Metadata.Storage.PlainType(rdr.readString());
+            return new Metadata.Storage.PlainType(rdr.readCompactInt());
         }
     }
 
@@ -115,64 +110,28 @@ public class MetadataReader implements ScaleReader<Metadata> {
         @Override
         public Metadata.Storage.MapType read(ScaleCodecReader rdr) {
             Metadata.Storage.MapDefinition definition = new Metadata.Storage.MapDefinition();
-            definition.setHasher(HASHER_ENUM_READER.read(rdr));
-            definition.setKey(rdr.readString());
-            definition.setType(rdr.readString());
-            definition.setIterable(rdr.readBoolean());
+            //check agian
+            definition.setHashers(HASHER_ENUM_READER.read(rdr));
+            definition.setKey(rdr.readCompactInt());
+            definition.setValue(rdr.readCompactInt());
             return new Metadata.Storage.MapType(definition);
         }
     }
 
-    static class TypeDoubleMapReader implements ScaleReader<Metadata.Storage.DoubleMapType> {
+
+
+    static class TypeWrapperReader implements ScaleReader<Metadata.TypeWrapper> {
 
         @Override
-        public Metadata.Storage.DoubleMapType read(ScaleCodecReader rdr) {
-            Metadata.Storage.DoubleMapDefinition definition = new Metadata.Storage.DoubleMapDefinition();
-            definition.setFirstHasher(HASHER_ENUM_READER.read(rdr));
-            definition.setFirstKey(rdr.readString());
-            definition.setSecondKey(rdr.readString());
-            definition.setType(rdr.readString());
-            definition.setSecondHasher(HASHER_ENUM_READER.read(rdr));
-            return new Metadata.Storage.DoubleMapType(definition);
-        }
-    }
-
-    static class CallReader implements ScaleReader<Metadata.Call> {
-
-        public static final ListReader<Metadata.Call.Arg> ARG_LIST_READER = new ListReader<>(new ArgReader());
-
-        @Override
-        public Metadata.Call read(ScaleCodecReader rdr) {
-            Metadata.Call result = new Metadata.Call();
-            result.setName(rdr.readString());
-            result.setArguments(ARG_LIST_READER.read(rdr));
-            result.setDocumentation(STRING_LIST_READER.read(rdr));
+        public Metadata.TypeWrapper read(ScaleCodecReader rdr) {
+            Metadata.TypeWrapper result = new Metadata.TypeWrapper();
+            //UNSURE
+            //maybe read string cast to int
+            result.setType(rdr.readCompactInt());
             return result;
         }
     }
 
-    static class ArgReader implements ScaleReader<Metadata.Call.Arg> {
-
-        @Override
-        public Metadata.Call.Arg read(ScaleCodecReader rdr) {
-            Metadata.Call.Arg result = new Metadata.Call.Arg();
-            result.setName(rdr.readString());
-            result.setType(rdr.readString());
-            return result;
-        }
-    }
-
-    static class EventReader implements ScaleReader<Metadata.Event> {
-
-        @Override
-        public Metadata.Event read(ScaleCodecReader rdr) {
-            Metadata.Event result = new Metadata.Event();
-            result.setName(rdr.readString());
-            result.setArguments(STRING_LIST_READER.read(rdr));
-            result.setDocumentation(STRING_LIST_READER.read(rdr));
-            return result;
-        }
-    }
 
     static class ConstantReader implements ScaleReader<Metadata.Constant> {
 
@@ -180,21 +139,11 @@ public class MetadataReader implements ScaleReader<Metadata> {
         public Metadata.Constant read(ScaleCodecReader rdr) {
             Metadata.Constant result = new Metadata.Constant();
             result.setName(rdr.readString());
-            result.setType(rdr.readString());
+            result.setType(rdr.readCompactInt());
             result.setValue(rdr.readByteArray());
             result.setDocumentation(STRING_LIST_READER.read(rdr));
             return result;
         }
     }
 
-    static class ErrorReader implements ScaleReader<Metadata.Error> {
-
-        @Override
-        public Metadata.Error read(ScaleCodecReader rdr) {
-            Metadata.Error result = new Metadata.Error();
-            result.setName(rdr.readString());
-            result.setDocumentation(STRING_LIST_READER.read(rdr));
-            return result;
-        }
-    }
 }

@@ -10,8 +10,8 @@ public class BalanceTransferWriter implements ScaleWriter<BalanceTransfer> {
 
     @Override
     public void write(ScaleCodecWriter wrt, BalanceTransfer value) throws IOException {
-        wrt.writeByte(value.getModuleIndex());
-        wrt.writeByte(value.getCallIndex());
+        wrt.writeByte(4);//value.getModuleIndex());
+        wrt.writeByte(0);//value.getCallIndex());
         wrt.write(DESTINATION_WRITER, value.getDestination());
         wrt.write(ScaleCodecWriter.COMPACT_BIGINT, value.getBalance().getValue());
     }

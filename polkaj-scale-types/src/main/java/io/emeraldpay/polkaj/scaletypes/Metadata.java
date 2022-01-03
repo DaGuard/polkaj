@@ -8,7 +8,7 @@ import java.util.Optional;
 /**
  * Runtime Metadata, which defines all available actions and types for the blockchain.
  * Available through state_getMetadata RPC.
- *
+ * <p>
  * Reference: https://github.com/polkadot-js/api/blob/master/packages/types/src/interfaces/metadata/definitions.ts
  */
 public class Metadata {
@@ -50,11 +50,6 @@ public class Metadata {
                 .findAny();
     }
 
-    public Optional<Call> findCall(String moduleName, String callName) {
-        return findModule(moduleName)
-                .flatMap((m) -> m.findCall(callName));
-    }
-
     @Override
     public final boolean equals(Object o) {
         if (this == o) return true;
@@ -73,10 +68,10 @@ public class Metadata {
     public static class Module {
         private String name;
         private Storage storage;
-        private List<Call> calls;
-        private List<Event> events;
+        private TypeWrapper calls;
+        private TypeWrapper events;
         private List<Constant> constants;
-        private List<Error> errors;
+        private TypeWrapper errors;
         private Integer index;
 
         public String getName() {
@@ -95,19 +90,19 @@ public class Metadata {
             this.storage = storage;
         }
 
-        public List<Call> getCalls() {
+        public TypeWrapper getCalls() {
             return calls;
         }
 
-        public void setCalls(List<Call> calls) {
+        public void setCalls(TypeWrapper calls) {
             this.calls = calls;
         }
 
-        public List<Event> getEvents() {
+        public TypeWrapper getEvents() {
             return events;
         }
 
-        public void setEvents(List<Event> events) {
+        public void setEvents(TypeWrapper events) {
             this.events = events;
         }
 
@@ -119,11 +114,11 @@ public class Metadata {
             this.constants = constants;
         }
 
-        public List<Error> getErrors() {
+        public TypeWrapper getErrors() {
             return errors;
         }
 
-        public void setErrors(List<Error> errors) {
+        public void setErrors(TypeWrapper errors) {
             this.errors = errors;
         }
 
@@ -133,15 +128,6 @@ public class Metadata {
 
         public void setIndex(Integer index) {
             this.index = index;
-        }
-
-        public Optional<Call> findCall(String name) {
-            if (calls == null) {
-                return Optional.empty();
-            }
-            return calls.stream()
-                    .filter(it -> it.getName().equals(name))
-                    .findAny();
         }
 
         @Override
@@ -330,8 +316,8 @@ public class Metadata {
             }
         }
 
-        public static class PlainType extends Type<String> {
-            public PlainType(String value) {
+        public static class PlainType extends Type<Integer> {
+            public PlainType(Integer value) {
                 super(value);
             }
 
@@ -342,41 +328,32 @@ public class Metadata {
         }
 
         public static class MapDefinition {
-            private Hasher hasher;
-            private String key;
-            private String type;
-            private boolean iterable;
+            private List<Hasher> hashers;
+            private int key;
+            private int value;
 
-            public Hasher getHasher() {
-                return hasher;
+            public List<Hasher> getHashers() {
+                return hashers;
             }
 
-            public void setHasher(Hasher hasher) {
-                this.hasher = hasher;
+            public void setHashers(List<Hasher> hashers) {
+                this.hashers = hashers;
             }
 
-            public String getKey() {
+            public int getKey() {
                 return key;
             }
 
-            public void setKey(String key) {
+            public void setKey(int key) {
                 this.key = key;
             }
 
-            public String getType() {
-                return type;
+            public int getValue() {
+                return value;
             }
 
-            public void setType(String type) {
-                this.type = type;
-            }
-
-            public boolean isIterable() {
-                return iterable;
-            }
-
-            public void setIterable(boolean iterable) {
-                this.iterable = iterable;
+            public void setValue(int value) {
+                this.value = value;
             }
 
             @Override
@@ -384,15 +361,14 @@ public class Metadata {
                 if (this == o) return true;
                 if (!(o instanceof MapDefinition)) return false;
                 MapDefinition that = (MapDefinition) o;
-                return iterable == that.iterable &&
-                        hasher == that.hasher &&
-                        Objects.equals(key, that.key) &&
-                        Objects.equals(type, that.type);
+                return Objects.equals(hashers, that.hashers) &&
+                        key == that.key &&
+                        value == that.value;
             }
 
             @Override
             public final int hashCode() {
-                return Objects.hash(hasher, key, type, iterable);
+                return Objects.hash(hashers, key, value);
             }
         }
 
@@ -484,144 +460,34 @@ public class Metadata {
         }
     }
 
-    public static class Call {
-        private int index;
-        private String name;
-        private List<Arg> arguments;
-        private List<String> documentation;
+    public static class TypeWrapper {
+        private int type;
 
-        public int getIndex() {
-            return index;
+        public int getType() {
+            return type;
         }
 
-        public void setIndex(int index) {
-            this.index = index;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public List<Arg> getArguments() {
-            return arguments;
-        }
-
-        public void setArguments(List<Arg> arguments) {
-            this.arguments = arguments;
-        }
-
-        public List<String> getDocumentation() {
-            return documentation;
-        }
-
-        public void setDocumentation(List<String> documentation) {
-            this.documentation = documentation;
+        public void setType(int type) {
+            this.type = type;
         }
 
         @Override
-        public final boolean equals(Object o) {
+        public boolean equals(Object o) {
             if (this == o) return true;
-            if (!(o instanceof Call)) return false;
-            Call call = (Call) o;
-            return Objects.equals(name, call.name) &&
-                    Objects.equals(index, call.index) &&
-                    Objects.equals(arguments, call.arguments) &&
-                    Objects.equals(documentation, call.documentation);
+            if (o == null || getClass() != o.getClass()) return false;
+            TypeWrapper that = (TypeWrapper) o;
+            return type == that.type;
         }
 
         @Override
-        public final int hashCode() {
-            return Objects.hash(name, index, arguments, documentation);
-        }
-
-        public static class Arg {
-            private String name;
-            private String type;
-
-            public String getName() {
-                return name;
-            }
-
-            public void setName(String name) {
-                this.name = name;
-            }
-
-            public String getType() {
-                return type;
-            }
-
-            public void setType(String type) {
-                this.type = type;
-            }
-
-            @Override
-            public final boolean equals(Object o) {
-                if (this == o) return true;
-                if (!(o instanceof Arg)) return false;
-                Arg arg = (Arg) o;
-                return Objects.equals(name, arg.name) &&
-                        Objects.equals(type, arg.type);
-            }
-
-            @Override
-            public final int hashCode() {
-                return Objects.hash(name, type);
-            }
-        }
-    }
-
-    public static class Event {
-        private String name;
-        private List<String> arguments;
-        private List<String> documentation;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public List<String> getArguments() {
-            return arguments;
-        }
-
-        public void setArguments(List<String> arguments) {
-            this.arguments = arguments;
-        }
-
-        public List<String> getDocumentation() {
-            return documentation;
-        }
-
-        public void setDocumentation(List<String> documentation) {
-            this.documentation = documentation;
-        }
-
-        @Override
-        public final boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Event)) return false;
-            Event event = (Event) o;
-            return Objects.equals(name, event.name) &&
-                    Objects.equals(arguments, event.arguments) &&
-                    Objects.equals(documentation, event.documentation);
-        }
-
-        @Override
-        public final int hashCode() {
-            return Objects.hash(name, arguments, documentation);
+        public int hashCode() {
+            return Objects.hash(type);
         }
     }
 
     public static class Constant {
         private String name;
-        private String type;
+        private int type;
         private byte[] value;
         private List<String> documentation;
 
@@ -633,11 +499,11 @@ public class Metadata {
             this.name = name;
         }
 
-        public String getType() {
+        public int getType() {
             return type;
         }
 
-        public void setType(String type) {
+        public void setType(int type) {
             this.type = type;
         }
 
@@ -663,7 +529,7 @@ public class Metadata {
             if (!(o instanceof Constant)) return false;
             Constant constant = (Constant) o;
             return Objects.equals(name, constant.name) &&
-                    Objects.equals(type, constant.type) &&
+                    type == constant.type &&
                     Arrays.equals(value, constant.value) &&
                     Objects.equals(documentation, constant.documentation);
         }
@@ -673,41 +539,6 @@ public class Metadata {
             int result = Objects.hash(name, type, documentation);
             result = 31 * result + Arrays.hashCode(value);
             return result;
-        }
-    }
-
-    public static class Error {
-        private String name;
-        private List<String> documentation;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public List<String> getDocumentation() {
-            return documentation;
-        }
-
-        public void setDocumentation(List<String> documentation) {
-            this.documentation = documentation;
-        }
-
-        @Override
-        public final boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Error)) return false;
-            Error error = (Error) o;
-            return Objects.equals(name, error.name) &&
-                    Objects.equals(documentation, error.documentation);
-        }
-
-        @Override
-        public final int hashCode() {
-            return Objects.hash(name, documentation);
         }
     }
 

@@ -22,7 +22,7 @@ public class Transfer {
 
 
     public static void main(String[] args) throws Exception {
-        String api = "ws://localhost:9944";
+        String api = "wss://kusama-rpc.polkadot.io";
         if (args.length >= 1) {
             api = args[0];
         }
@@ -34,13 +34,13 @@ public class Transfer {
         if (args.length >= 3) {
             System.out.println("Use provided addresses");
             aliceKey = Schnorrkel.getInstance().generateKeyPairFromSeed(Hex.decodeHex(args[1]));
-            bob =  Address.from(args[2]);
+            bob = Address.from(args[2]);
         } else {
             System.out.println("Use standard accounts for Alice and Bob, expected to run against development network");
             aliceKey = Schnorrkel.getInstance().generateKeyPairFromSeed(
                     Hex.decodeHex("e5be9a5092b81bca64be81d212e7f2f9eba183bb7a90954f7b76361f6edb5c0a")
             );
-            bob =  Address.from("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty");
+            bob = Address.from("5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty");
         }
         alice = new Address(SS58Type.Network.CANARY, aliceKey.getPublicKey());
 
@@ -101,11 +101,11 @@ public class Transfer {
             });
 
             // get current runtime metadata to correctly build the extrinsic
-            Metadata metadata = client.execute(
-                        StandardCommands.getInstance().stateMetadata()
-                    )
-                    .thenApply(ScaleExtract.fromBytesData(new MetadataReader()))
-                    .get();
+//            Metadata metadata = client.execute(
+//                            StandardCommands.getInstance().stateMetadata()
+//                    )
+//                    .thenApply(ScaleExtract.fromBytesData(new MetadataReader()))
+//                    .get();
 
             // prepare context for execution
             ExtrinsicContext context = ExtrinsicContext.newAutoBuilder(alice, client)
@@ -124,7 +124,7 @@ public class Transfer {
 
             // prepare call, and sign with sender Secret Key within the context
             AccountRequests.Transfer transfer = AccountRequests.transfer()
-                    .runtime(metadata)
+                    //.runtime(metadata)
                     .from(alice)
                     .to(bob)
                     .amount(amount)

@@ -5,17 +5,11 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 import io.emeraldpay.polkaj.scale.ScaleCodecReader;
 import io.emeraldpay.polkaj.scale.ScaleCodecWriter;
-import io.emeraldpay.polkaj.scaletypes.AccountInfo;
-import io.emeraldpay.polkaj.scaletypes.AccountInfoReader;
-import io.emeraldpay.polkaj.scaletypes.BalanceReader;
-import io.emeraldpay.polkaj.scaletypes.BalanceTransfer;
-import io.emeraldpay.polkaj.scaletypes.BalanceTransferWriter;
-import io.emeraldpay.polkaj.scaletypes.Extrinsic;
-import io.emeraldpay.polkaj.scaletypes.ExtrinsicWriter;
-import io.emeraldpay.polkaj.scaletypes.Metadata;
+import io.emeraldpay.polkaj.scaletypes.*;
 import io.emeraldpay.polkaj.schnorrkel.Schnorrkel;
 import io.emeraldpay.polkaj.ss58.SS58Type;
 import io.emeraldpay.polkaj.types.Address;
@@ -52,7 +46,9 @@ public class AccountRequests {
     public static TransferBuilder transfer() {
         return new TransferBuilder();
     }
-
+    public static ApproveBuilder approve() {
+        return new ApproveBuilder();
+    }
     /**
      * Transfer value from one account to another, but making sure that the balance of both accounts is above the existential
      * deposit
@@ -142,7 +138,36 @@ public class AccountRequests {
                     '}';
         }
     }
+    public static class Approve implements ExtrinsicRequest {
+        private static final ExtrinsicWriter<ApproveTransfer> CODEC = new ExtrinsicWriter<>(
+                new ApproveTransferWriter()
+        );
 
+        private final Extrinsic<ApproveTransfer> extrinsic;
+
+        public Approve(Extrinsic<ApproveTransfer> extrinsic) {
+            this.extrinsic = extrinsic;
+        }
+
+        public Extrinsic<ApproveTransfer> getExtrinsic() {
+            return extrinsic;
+        }
+
+        @Override
+        public ByteData encodeRequest() throws IOException {
+            ByteArrayOutputStream buf = new ByteArrayOutputStream();
+            ScaleCodecWriter writer = new ScaleCodecWriter(buf);
+            writer.write(CODEC, extrinsic);
+            return new ByteData(buf.toByteArray());
+        }
+
+        @Override
+        public String toString() {
+            return "Approve{" +
+                    "extrinsic=" + extrinsic +
+                    '}';
+        }
+    }
 
     public static class TransferBuilder {
         private Address from;
@@ -289,6 +314,154 @@ public class AccountRequests {
             extrinsic.setCall(this.call);
             extrinsic.setTx(tx);
             return new Transfer(extrinsic);
+        }
+
+        private Extrinsic.Signature buildSignature(Extrinsic.Signature signature) {
+            switch (signature.getType()) {
+                case ED25519:
+                    return new Extrinsic.ED25519Signature(signature.getValue());
+                case SR25519:
+                    return new Extrinsic.SR25519Signature(signature.getValue());
+                default:
+                    String msg = String.format("Signature type %s is not supported", signature.getType());
+                    throw new UnsupportedOperationException(msg);
+            }
+        }
+    }
+    public static class ApproveBuilder{
+        private Address from;
+        private Extrinsic.Signature signature;
+        private Long nonce;
+        private DotAmount tip;
+
+        protected final ApproveTransfer call = new ApproveTransfer();
+
+
+
+        /**
+         * Set call details
+         *
+         * @param moduleIndex module index
+         * @param callIndex call index in the module
+         * @return builder
+         */
+        public ApproveBuilder module(int moduleIndex, int callIndex) {
+            call.setModuleIndex(moduleIndex);
+            call.setCallIndex(callIndex);
+            return this;
+        }
+
+        /**
+         *
+         * @param from sender address
+         * @return builder
+         */
+        public ApproveBuilder from(Address from) {
+            this.from = from;
+            if (this.tip == null) {
+                // set default tip as well now that the network is known
+                this.tip = new DotAmount(BigInteger.ZERO, from.getNetwork());
+            }
+            return this;
+        }
+        public ApproveBuilder threshold(int threshold){
+            this.call.setThreshold(threshold);
+            return this;
+        }
+
+        public ApproveBuilder otherSignatures(List<Address> otherSignatures) {
+            this.call.setOtherSignatures(otherSignatures);
+            return this;
+        }
+
+        public ApproveBuilder timepoint(Timepoint time) {
+            this.call.setTimepoint(time);
+            return this;
+        }
+        public ApproveBuilder hash(byte[] hash) {
+            this.call.setHash(hash);
+            return this;
+        }
+        public ApproveBuilder weight(int weight) {
+            this.call.setWeight(weight);
+            return this;
+        }
+
+
+        /**
+         * (optional) Set once, if setting a predefined signature.
+         * Otherwise, nonce is set during {@link #sign} operation
+         *
+         * @param nonce once to use
+         * @return builder
+         */
+        public ApproveBuilder nonce(Long nonce) {
+            this.nonce = nonce;
+            return this;
+        }
+
+        /**
+         * (optional) Set once provided with the context, if setting a presefined signature.
+         * Otherwise nonce is set during {@link #sign} operation
+         *
+         * @param context context with once to use
+         * @return builder
+         */
+        public ApproveBuilder nonce(ExtrinsicContext context) {
+            return nonce(context.getNonce());
+        }
+
+        /**
+         * Set a predefined signature. Either this method, or {@link #sign} must be called
+         *
+         * @param signature precalculated signature
+         * @return builder
+         */
+        public ApproveBuilder signed(Extrinsic.Signature signature) {
+            this.signature = signature;
+            return this;
+        }
+
+        /**
+         * Sign the transfer
+         *
+         * @param key sender key pair
+         * @param context signing context
+         * @return builder
+         * @throws SignException if signing is failed
+         * @throws IllegalStateException on data conflict
+         */
+        public ApproveBuilder sign(Schnorrkel.KeyPair key, ExtrinsicContext context) throws SignException {
+            if (this.nonce != null && this.nonce != context.getNonce()) {
+                throw new IllegalStateException("Trying to sign with context with different nonce. Reset nonce, or provide the same value");
+            }
+            if (this.from != null) {
+                if (!Arrays.equals(this.from.getPubkey(), key.getPublicKey())) {
+                    throw new SignException("Cannot sign transfer from " + this.from + " by pubkey of " + new Address(this.from.getNetwork(), key.getPublicKey()));
+                }
+            } else {
+                this.from = new Address(SS58Type.Network.LIVE, key.getPublicKey());
+            }
+            ExtrinsicSigner<ApproveTransfer> signer = new ExtrinsicSigner<>(new ApproveTransferWriter());
+            return this.nonce(context)
+                    .signed(new Extrinsic.SR25519Signature(signer.sign(context, this.call, key)));
+        }
+
+        /**
+         *
+         * @return signed Transfer
+         */
+        public Approve build() {
+            Extrinsic.TransactionInfo tx = new Extrinsic.TransactionInfo();
+            tx.setNonce(this.nonce);
+            tx.setSender(this.from);
+            tx.setSignature(buildSignature(this.signature));
+            tx.setTip(this.tip);
+
+            Extrinsic<ApproveTransfer> extrinsic = new Extrinsic<>();
+            extrinsic.setCall(this.call);
+            extrinsic.setTx(tx);
+            return new Approve(extrinsic);
         }
 
         private Extrinsic.Signature buildSignature(Extrinsic.Signature signature) {

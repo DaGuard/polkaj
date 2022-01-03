@@ -49,9 +49,9 @@ public class BalanceTransfer extends ExtrinsicCall {
      * @param callName name of the call to execute, e.g. transfer, transfer_keep_alive, or transfer_all
      */
     public void init(Metadata metadata, String callName) {
-        Metadata.Call call = metadata.findCall("Balances", callName)
-                .orElseThrow(() -> new IllegalStateException("Call 'Balances." + callName + "' doesn't exist"));
-        init(call);
+//        Metadata.Call call = metadata.findCall("Balances", callName)
+//                .orElseThrow(() -> new IllegalStateException("Call 'Balances." + callName + "' doesn't exist"));
+//        init(call);
     }
 
     public UnionValue<MultiAddress> getDestination() {

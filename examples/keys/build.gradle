@@ -15,6 +15,7 @@ dependencies {
     implementation "io.emeraldpay.polkaj:polkaj-ss58:$polkajVersion"
     implementation "io.emeraldpay.polkaj:polkaj-schnorrkel:$polkajVersion"
     implementation 'commons-codec:commons-codec:1.14'
+
 }
 
 application {

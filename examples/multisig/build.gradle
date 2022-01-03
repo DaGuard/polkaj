@@ -1,0 +1,34 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    maven { url 'https://jitpack.io' }
+}
+
+apply from: '../common.gradle'
+
+dependencies {
+    implementation "io.emeraldpay.polkaj:polkaj-common-types:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-ss58:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-schnorrkel:$polkajVersion"
+    implementation 'commons-codec:commons-codec:1.14'
+    implementation "io.emeraldpay.polkaj:polkaj-api-http:$polkajVersion"
+    implementation 'org.apache.commons:commons-lang3:3.6'
+    implementation 'org.apache.commons:commons-io:1.3.2'
+    implementation "com.google.guava:guava:28.0-jre"
+    implementation 'org.bitcoinj:bitcoinj-core:0.16.1'
+    implementation "io.emeraldpay.polkaj:polkaj-api-http:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-api-ws:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-json-types:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-scale-types:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-tx:$polkajVersion"
+    implementation "io.emeraldpay.polkaj:polkaj-schnorrkel:$polkajVersion"
+    implementation 'commons-codec:commons-codec:1.14'
+
+
+
+}
+mainClassName = "Multisig"
